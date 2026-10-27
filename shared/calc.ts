@@ -11,11 +11,38 @@ function fromDayNumber(n: number): string {
   return new Date(n * DAY_MS).toISOString().slice(0, 10);
 }
 
+/** Zona horaria de la app (sólo el servidor la define; el navegador usa la del dispositivo). */
+let appTimeZone: string | undefined;
+
+export function setTimeZone(timeZone: string | undefined): void {
+  appTimeZone = timeZone;
+}
+
+function partsNow(now: Date): { y: number; m: number; d: number; h: number } {
+  if (!appTimeZone) return { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate(), h: now.getHours() };
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: appTimeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+    })
+      .formatToParts(now)
+      .map((p) => [p.type, p.value]),
+  );
+  return { y: Number(parts.year), m: Number(parts.month), d: Number(parts.day), h: Number(parts.hour) };
+}
+
 export function todayISO(now = new Date()): string {
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  const { y, m, d } = partsNow(now);
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+/** Hora actual (0-23) en la zona de la app. */
+export function currentHour(now = new Date()): number {
+  return partsNow(now).h;
 }
 
 export function diffDays(from: string, to: string): number {
