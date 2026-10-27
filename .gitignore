@@ -1,0 +1,7 @@
+node_modules
+dist
+# Datos reales (medicamentos, sesiones, hash de la contraseña): nunca al repo.
+data/
+.env
+.env.*
+*.log
