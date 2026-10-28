@@ -2,7 +2,8 @@ import type { Database } from '../shared/types.js';
 import { defaultAuth, defaultNotifications, seedDatabase } from './seed.js';
 import { createStore } from './store.js';
 
-const store = createStore();
+const { store, kind: storeKind } = createStore();
+export { storeKind };
 
 let cache: Database | null = null;
 let writeQueue: Promise<void> = Promise.resolve();

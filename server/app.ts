@@ -2,6 +2,7 @@ import express from 'express';
 import { timingSafeEqual } from 'node:crypto';
 import { setTimeZone } from '../shared/calc.js';
 import { authApi, requireAuth } from './auth.js';
+import { getDb, storeKind } from './db.js';
 import { runDailyCheck } from './notify.js';
 import { api, errorHandler } from './routes.js';
 
@@ -22,6 +23,23 @@ export const app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use(express.json());
+
+/** Diagnóstico público: dónde se guardan los datos y si la conexión funciona (sin datos ni claves). */
+app.get('/api/health', async (_req, res) => {
+  try {
+    await getDb();
+    res.json({ ok: true, storage: storeKind });
+  } catch (err) {
+    const e = err as { code?: string; name?: string; message?: string };
+    console.error('Health check falló:', err);
+    res.status(500).json({
+      ok: false,
+      storage: storeKind,
+      error: e.code ?? e.name ?? 'Error',
+      detail: String(e.message ?? '').slice(0, 160),
+    });
+  }
+});
 
 /** Lo llama el Cron de Vercel una vez por día; Vercel envía `Authorization: Bearer $CRON_SECRET`. */
 app.get('/api/cron/notify', async (req, res, next) => {

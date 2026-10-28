@@ -270,6 +270,8 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     res.status(400).json({ error: err.issues.map((i) => i.message).join('. ') });
   } else if (err instanceof HttpError) {
     res.status(err.status).json({ error: err.message });
+  } else if ((err as { code?: string }).code === 'NO_DATABASE') {
+    res.status(503).json({ error: (err as Error).message });
   } else {
     console.error(err);
     res.status(500).json({ error: 'Error interno del servidor' });

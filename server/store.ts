@@ -71,7 +71,29 @@ function postgresStore(url: string): Store {
   };
 }
 
-export function createStore(): Store {
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  return url ? postgresStore(url) : fileStore();
+/** DATABASE_URL / POSTGRES_URL; si al conectar la base se eligió otro prefijo (p. ej. STORAGE_URL), cualquier variable con una URL de Postgres. */
+function findPostgresUrl(): string | undefined {
+  const direct = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (direct) return direct;
+  return Object.values(process.env).find((v) => v && /^postgres(ql)?:\/\//.test(v));
+}
+
+/** En Vercel no hay disco persistente: sin base de datos conectada, todo pedido falla con un mensaje claro. */
+function missingStore(): Store {
+  const fail = (): never => {
+    throw Object.assign(
+      new Error('Falta la base de datos: conectá Neon al proyecto de Vercel (variable DATABASE_URL).'),
+      { code: 'NO_DATABASE' },
+    );
+  };
+  return { cacheable: false, load: fail, save: fail, init: fail };
+}
+
+export type StoreKind = 'postgres' | 'file' | 'none';
+
+export function createStore(): { store: Store; kind: StoreKind } {
+  const url = findPostgresUrl();
+  if (url) return { store: postgresStore(url), kind: 'postgres' };
+  if (process.env.VERCEL) return { store: missingStore(), kind: 'none' };
+  return { store: fileStore(), kind: 'file' };
 }
