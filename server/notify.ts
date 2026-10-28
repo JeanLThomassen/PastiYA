@@ -1,4 +1,4 @@
-import { computeView, todayISO } from '../shared/calc.js';
+import { computeView, currentHour, todayISO } from '../shared/calc.js';
 import type { Alert, Database, NotificationSettings } from '../shared/types.js';
 import { getDb, mutate } from './db.js';
 
@@ -70,11 +70,11 @@ export async function sendTest(): Promise<string> {
 }
 
 /** Envía como máximo un aviso por día, a partir de la hora configurada. */
-async function tick(): Promise<void> {
+export async function runDailyCheck(): Promise<void> {
   const db = await getDb();
   const n = db.notifications;
   const today = todayISO();
-  if (!n.enabled || n.lastSentDate === today || new Date().getHours() < n.hour) return;
+  if (!n.enabled || n.lastSentDate === today || currentHour() < n.hour) return;
 
   const alerts = phoneAlerts(db, today);
   try {
@@ -94,7 +94,7 @@ async function tick(): Promise<void> {
 }
 
 export function startScheduler(): void {
-  const run = () => tick().catch((err) => console.error(err));
+  const run = () => runDailyCheck().catch((err) => console.error(err));
   setTimeout(run, 5_000);
   setInterval(run, 15 * 60_000);
 }
